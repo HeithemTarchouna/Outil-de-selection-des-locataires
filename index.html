@@ -119,10 +119,18 @@
     }
 
     .message {
-      min-height: 28px;
-      color: var(--accent-dark);
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      min-width: min(86%, 520px);
+      padding: 12px 18px;
+      border-radius: 999px;
+      color: #ffffff;
+      background: rgba(36, 88, 62, 0.88);
+      box-shadow: 0 10px 22px rgba(38, 33, 27, 0.2);
       font-weight: 850;
-      margin: 6px 0 18px;
+      z-index: 2;
       transition: transform 180ms ease, opacity 180ms ease;
     }
 
@@ -341,9 +349,8 @@
         <!-- Remplacez le src ci-dessous par une vraie photo du salon. Exemple : images/living-room.jpg -->
         <img id="livingRoomPhoto" src="" alt="Salon" />
         <div class="placeholder" id="livingRoomPlaceholder">Ajoutez ici une photo du salon</div>
+        <div class="message" id="message">Choisissez avec soin.</div>
       </div>
-
-      <div class="message" id="message">Choisissez avec soin.</div>
 
       <div class="choices-wrap" id="choicesWrap">
         <div class="choices">
@@ -390,7 +397,17 @@
     const CONFIG = {
       address: "Place. Saint-Géry 4",
       winnerNames: "Heithem & Cédric",
-      livingRoomPhoto: "images/house/house 1.png", // Example: "images/living-room.jpg"
+      housePhotos: {
+        original: "images/house/original/house 1.png",
+        trashed: [
+          "images/house/trashed/1.png",
+          "images/house/trashed/2.png",
+          "images/house/trashed/3.png",
+          "images/house/trashed/4.png",
+          "images/house/trashed/5.png"
+        ],
+        upgraded: "images/house/upgraded/upgraded.png"
+      },
       usPhoto: "images/us/us.png", // Example: "images/us.jpg"
       messages: [
         "Choix intéressant.",
@@ -419,16 +436,47 @@
     let lastX = 0;
     let lastY = 0;
 
+    function setLivingRoomPhoto(photoPath, fallbackPath = "") {
+      if (!photoPath) {
+        livingRoomPhoto.style.display = "none";
+        livingRoomPlaceholder.style.display = "grid";
+        livingRoomPhoto.removeAttribute("src");
+        livingRoomPhoto.onerror = null;
+        return;
+      }
+
+      livingRoomPhoto.style.display = "block";
+      livingRoomPlaceholder.style.display = "none";
+      livingRoomPhoto.onerror = fallbackPath
+        ? () => {
+            livingRoomPhoto.onerror = null;
+            setLivingRoomPhoto(fallbackPath);
+          }
+        : null;
+      livingRoomPhoto.src = photoPath;
+    }
+
+    function updateHouseCondition(state = "original") {
+      if (state === "trashed") {
+        const imageIndex = Math.min(attempts, CONFIG.housePhotos.trashed.length) - 1;
+        const trashedPhoto = CONFIG.housePhotos.trashed[Math.max(imageIndex, 0)];
+        setLivingRoomPhoto(trashedPhoto, CONFIG.housePhotos.original);
+        return;
+      }
+
+      if (state === "upgraded") {
+        setLivingRoomPhoto(CONFIG.housePhotos.upgraded, CONFIG.housePhotos.original);
+        return;
+      }
+
+      setLivingRoomPhoto(CONFIG.housePhotos.original);
+    }
+
     function setupContent() {
       addressText.textContent = CONFIG.address;
       winnerNames.textContent = CONFIG.winnerNames;
 
-      if (CONFIG.livingRoomPhoto) {
-        livingRoomPhoto.src = CONFIG.livingRoomPhoto;
-        livingRoomPlaceholder.style.display = "none";
-      } else {
-        livingRoomPhoto.style.display = "none";
-      }
+      updateHouseCondition("original");
 
       if (CONFIG.usPhoto) {
         usPhoto.parentElement.classList.add("has-photo");
@@ -447,6 +495,7 @@
 
     function dodgeOtherApplicants() {
       attempts += 1;
+      updateHouseCondition("trashed");
 
       const maxDodges = CONFIG.maxDodges;
       const progress = Math.min(attempts, maxDodges) / maxDodges;
@@ -487,6 +536,7 @@
     }
 
     function win() {
+      updateHouseCondition("upgraded");
       gameScreen.classList.add("hidden");
       winScreen.classList.add("active");
     }
@@ -503,6 +553,7 @@
       chooseUs.style.zIndex = "";
       chooseUs.querySelector(".choice-label").textContent = "Mon colocataire et moi 😊😊";
       chooseUs.querySelector(".choice-note").textContent = "Fiables. Propres. Excellente énergie.";
+      updateHouseCondition("original");
       gameScreen.classList.remove("hidden");
       winScreen.classList.remove("active");
     }
